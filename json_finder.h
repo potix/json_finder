@@ -45,9 +45,11 @@ int json_finder_find(
     char const **error_description,
     int *error_line);
 
-char *
+int
 json_finder_unescape_strdup(
-    json_string_t *string);
+    char **unescape_str,
+    size_t *unescape_str_size,
+    json_string_t *str);
 
 int
 json_finder_minimize(

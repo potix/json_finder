@@ -513,20 +513,22 @@ json_finder_find(
 	return -1;
 }
 
-char *
+int
 json_finder_unescape_strdup(
-    json_string_t *string) {
-	char *result;
+    char **unescape_str,
+    size_t *unescape_str_size,
+    json_string_t *str) {
+	char *first;
 	char *it;
 	char *last;
 	unsigned int codepoint;
 	
-	if ((result = malloc(string->len + 1)) == NULL) {
-		return NULL;
+	if ((first = malloc(str->len + 1)) == NULL) {
+		return 1;
 	}
-	memcpy(result, string->ptr, string->len);
-	result[string->len] = '\0';
-	it = result;
+	memcpy(first, str->ptr, str->len);
+	first[str->len] = '\0';
+	it = first;
 	last = it;
 	while (*it) {
 		if (*it == '\\') {
@@ -557,7 +559,7 @@ json_finder_unescape_strdup(
 				break;
 			case 'u':
 				if (hexstreamtoui(it + 2, it + 6, &codepoint) != it + 6) {
-					return NULL;
+					return 1;
 				}
 				if (codepoint <= 0x7F) {
 					*last = (char)codepoint;
@@ -572,7 +574,7 @@ json_finder_unescape_strdup(
 				it += 4;
 				break;
 			default:
-				return NULL;
+				return 1;
 			}
 			++last;
 			it += 2;
@@ -580,9 +582,11 @@ json_finder_unescape_strdup(
 			*last++ = *it++;
 		}
 	}
-	*last = '\0';
+	*last++ = '\0';
+	*unescape_str = first;
+	*unescape_str_size = last - first;
 
-	return result;
+	return 0;
 }
 
 int

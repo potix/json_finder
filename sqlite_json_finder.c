@@ -16,7 +16,8 @@ json_find(
 {
 	const char *desc;
 	json_elem_t elem;
-	char *str;
+	char *uestr;
+	size_t uestr_size;
 
 	if (sqlite3_value_type(argv[0]) != SQLITE_TEXT) {
 		sqlite3_result_error(context, "Invalid argument (1).", -1);
@@ -59,12 +60,11 @@ json_find(
 		sqlite3_result_double(context, elem.value.d);
 		break;
 	case JSON_STRING:
-		str = json_finder_unescape_strdup(&elem.value.s);
-		if (str == NULL) {
+		if (json_finder_unescape_strdup(&uestr, &uestr_size, &elem.value.s)) {
 			sqlite3_result_error(context, "Failed to allocate memory.", -1);
 			return;
 		}
-		sqlite3_result_text(context, str, -1, json_finder_free);
+		sqlite3_result_text(context, uestr, uestr_size, json_finder_free);
 		break;
 	case JSON_NULL:
 		sqlite3_result_null(context);
