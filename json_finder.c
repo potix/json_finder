@@ -559,6 +559,7 @@ json_finder_unescape_strdup(
 				break;
 			case 'u':
 				if (hexstreamtoui(it + 2, it + 6, &codepoint) != it + 6) {
+					free(first);
 					return 1;
 				}
 				if (codepoint <= 0x7F) {
@@ -574,6 +575,7 @@ json_finder_unescape_strdup(
 				it += 4;
 				break;
 			default:
+				free(first);
 				return 1;
 			}
 			++last;
