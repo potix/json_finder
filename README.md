@@ -4,7 +4,7 @@
 * sqlite3 (need sqlite3ext.h)
 
 ## about json finder
-* json finder is library base on vjson for find value from json data.
+* json finder is library for find value from json data.
 * json finder is udf of sqlite.
 * json finder is created on the basis of the vjson code.
 
