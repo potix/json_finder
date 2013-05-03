@@ -37,7 +37,7 @@
     * first argument is coluanm name of json string.
     * second argument is key for finding.
     * nested key is separate by '.'.
-        * e.g: { "a" : { "b" : 1 } } -> 'a.b'
+        * e.g: { "a" : { "b" : 1 } } -> 'a.b', { "a" : [ "b" ] }  -> 'a.0'
 
 ## restrictions
 * not supported nesting 32 times or more.
