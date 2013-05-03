@@ -49,5 +49,7 @@
 ## TODO
 * speed up.
 * relaxation of restrictions
+* sufficient test
 * mysql support.
+
 
