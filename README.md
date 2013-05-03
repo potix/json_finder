@@ -26,12 +26,12 @@
     > ./create_test_sql.sh | sqlite3 test.db
 
 ## udf functions
-* jfmin(<json text>)
+* jfmin(json_text)
   * minimize function.
   * one argument only.
   * argument is json text.
 
-* jfget(<json colum name>, '<key>')
+* jfget(json_column_name, 'finding_key')
   * find function.
   * two arguments.
   * first argument is coluanm name of json text.
