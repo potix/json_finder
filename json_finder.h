@@ -49,8 +49,10 @@ char *
 json_finder_unescape_strdup(
     json_string_t *string);
 
-char *
+int
 json_finder_minimize(
+    char **json_min,
+    size_t *json_min_size,
     const char *json);
 
 #endif

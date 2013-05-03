@@ -585,18 +585,20 @@ json_finder_unescape_strdup(
 	return result;
 }
 
-char *
+int
 json_finder_minimize(
+    char **json_min,
+    size_t *json_min_size,
     const char *json)
 {
-	char *result;
+	char *first;
 	char *it;
 	char *last;
 	
-	if ((result = strdup(json)) == NULL) {
-		return NULL;
+	if ((first = strdup(json)) == NULL) {
+		return 1;
 	}
-	it = result;
+	it = first;
 	last = it;
 	while (*it) {
 		if (*it == '"') {
@@ -618,7 +620,9 @@ json_finder_minimize(
 			*last++ = *it++;
 		}
 	}
-	*last = '\0';
+	*last++ = '\0';
+	*json_min = first;
+	*json_min_size = last - first;
 
-	return result;
+	return 0;
 }
