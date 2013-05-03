@@ -48,8 +48,8 @@
 
 ## TODO
 * speed up.
-* reduce restrictions
-* sufficient test
+* reduce restrictions.
+* sufficient test.
 * mysql support.
 
 
