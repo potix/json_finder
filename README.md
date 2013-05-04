@@ -25,7 +25,7 @@
 ## example 
     > cd example
     > ./create_sqlite_sql.sh | sqlite3 test.db
-    > cp ../mysql_json_finder.so.0.0.0 /usr/lib64/mysql/plugin/
+    > sudo cp ../mysql_json_finder.so.0.0.0 /usr/lib64/mysql/plugin/
     > ./create_mysql_sql.sh | mysql -u root -p
 
 ## udf functions
