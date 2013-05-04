@@ -62,7 +62,7 @@
     * if key include '.', escape by '\\'
         * e.g:  { "a.txt" : { "content" : "hello!!" } } -> 'a\\.txt.content'
 
-* jfget_int(json_column_name, 'finding_key')
+* jfgetint(json_column_name, 'finding_key')
     * finding function.
     * two arguments.
     * first argument is coluanm name of json string.
@@ -72,7 +72,7 @@
     * nested key is separate by '.'.
     * if key include '.', escape by '\\'
 
-* jfget_real(json_column_name, 'finding_key')
+* jfgetreal(json_column_name, 'finding_key')
     * finding function.
     * two arguments.
     * first argument is coluanm name of json string.
