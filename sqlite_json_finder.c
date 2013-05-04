@@ -1,8 +1,6 @@
-#include <sqlite3ext.h>
-#include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <sqlite3ext.h>
 
 #include "json_finder.h"
 
@@ -20,7 +18,7 @@ json_find(
 	size_t uestr_size;
 
 	if (sqlite3_value_type(argv[0]) != SQLITE_TEXT) {
-		sqlite3_result_error(context, "Invalid argument (1).", -1);
+		sqlite3_result_error(context, "Invalid argument (0).", -1);
 		return;
 	}
 	if (sqlite3_value_type(argv[1]) != SQLITE_TEXT) {
