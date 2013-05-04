@@ -40,7 +40,6 @@ jfget(UDF_INIT *initid, UDF_ARGS *args, char *result, unsigned long *length, cha
 	json_elem_t elem;
 	char *uestr;
 	size_t uestr_size;
-	char *str;
 
 	switch (json_finder_find(
 	    &elem,
@@ -55,7 +54,6 @@ jfget(UDF_INIT *initid, UDF_ARGS *args, char *result, unsigned long *length, cha
 		*error = 1;
 		return NULL;
 	case -1:
-		*length = 0;
 		*is_null = 1;
 		return NULL;
 	default:
@@ -64,40 +62,24 @@ jfget(UDF_INIT *initid, UDF_ARGS *args, char *result, unsigned long *length, cha
 	switch (elem.type) {
 	case JSON_BOOL:
 		if (elem.value.b) {
-			str = malloc(sizeof("true"));
-			if (str == NULL) {
-				*error = 1;
-				return NULL;
-			}
-			strcpy(str, "true");
+			strcpy(result, "true");
 			*length = sizeof("true") - 1;
-			initid->ptr = str;
-			return str;
+			return result;
 		} else {
-			str = malloc(sizeof("false"));
-			if (str == NULL) {
-				*error = 1;
-				return NULL;
-			}
-			strcpy(str, "false");
+			strcpy(result, "false");
 			*length = sizeof("false") - 1;
-			initid->ptr = str;
-			return str;
+			return result;
 		}
 	case JSON_INTEGER:
-		str = malloc(elem.value.ll.s.len + 1);
-		memcpy(str, elem.value.ll.s.ptr, elem.value.ll.s.len);
-		str[elem.value.ll.s.len] = '\0';
+		memcpy(result, elem.value.ll.s.ptr, elem.value.ll.s.len);
+		result[elem.value.ll.s.len] = '\0';
 		*length = elem.value.ll.s.len;
-		initid->ptr = str;
-		return str;
+		return result;
 	case JSON_DOUBLE:
-		str = malloc(elem.value.d.s.len + 1);
-		memcpy(str, elem.value.d.s.ptr, elem.value.d.s.len);
-		str[elem.value.d.s.len] = '\0';
+		memcpy(result, elem.value.d.s.ptr, elem.value.d.s.len);
+		result[elem.value.d.s.len] = '\0';
 		*length = elem.value.d.s.len;
-		initid->ptr = str;
-		return str;
+		return result;
 	case JSON_STRING:
 		if (json_finder_unescape_strdup(&uestr, &uestr_size, &elem.value.s)) {
 			*error = 1;
@@ -107,7 +89,6 @@ jfget(UDF_INIT *initid, UDF_ARGS *args, char *result, unsigned long *length, cha
 		initid->ptr = uestr;
 		return uestr;
 	case JSON_NULL:
-		*length = 0;
 		*is_null = 1;
 		return NULL;
 	default:
@@ -117,7 +98,7 @@ jfget(UDF_INIT *initid, UDF_ARGS *args, char *result, unsigned long *length, cha
 }
 
 my_bool
-jfget_integer_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
+jfget_int_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
 {
 	if (args->arg_count != 2) {
 		strcpy(message, "jfget() requires two arguments");
@@ -137,13 +118,13 @@ jfget_integer_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
 }
 
 void
-jfget_integer_deinit(UDF_INIT *initid)
+jfget_int_deinit(UDF_INIT *initid)
 {
 	return;
 }
 
 long long
-jfget_integer(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
+jfget_int(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 {
 	json_elem_t elem;
 
@@ -211,7 +192,8 @@ jfget_real_deinit(UDF_INIT *initid)
 	return;
 }
 
-double jfget_real(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
+double
+jfget_real(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 {
 	json_elem_t elem;
 
@@ -252,4 +234,46 @@ double jfget_real(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 		*error = 1;
 		return 0;
 	}
+}
+
+my_bool
+jfmin_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
+{
+	if (args->arg_count != 1) {
+		strcpy(message, "jfget() requires one arguments");
+		return 1;
+	}
+	if (args->arg_type[0] != STRING_RESULT) {
+		strcpy(message, "jfget() requires a string");
+		return 1;
+	}
+	args->maybe_null[0] = 0;
+	initid->ptr = NULL;
+	return 0;
+}
+
+void
+jfmin_deinit(UDF_INIT *initid)
+{
+	free(initid->ptr);
+	return;
+}
+ 
+char *
+jfmin(UDF_INIT *initid, UDF_ARGS *args, char *result, unsigned long *length, char *is_null, char *error)
+{
+        char *json_min;
+        ssize_t json_min_size;
+
+        if (json_finder_minimize(
+            &json_min,
+            &json_min_size,
+	    (const char *)args->args[0],
+            (ssize_t)args->lengths[0])) {
+		*error = 1;
+                return NULL;
+        }
+	initid->ptr = json_min;
+	*length = json_min_size -1;
+	return json_min;
 }
