@@ -6,7 +6,7 @@
 
 ## about json finder
 * json finder is library for find value from json string.
-* json finder is udf of sqlite.
+* json finder is udf of sqlite and mysql.
 * json finder is created on the basis of the vjson code.
 
 ## license
