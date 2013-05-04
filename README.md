@@ -23,7 +23,8 @@
 
 ## example 
     > cd example
-    > ./create_test_sql.sh | sqlite3 test.db
+    > ./create_sqlite_sql.sh | sqlite3 test.db
+    > ./create_mysql_sql.sh | mysql -u root -p
 
 ## udf functions
 
@@ -54,7 +55,7 @@
     * two arguments.
     * first argument is coluanm name of json string.
     * second argument is key for finding.
-    * return string or null
+    * return string or null.
         * integer, real and boolean are returned as string
     * nested key is separate by '.'.
         * e.g: { "a" : { "b" : 1 } } -> 'a.b', { "a" : [ "b" ] }  -> 'a.0'
@@ -66,7 +67,7 @@
     * two arguments.
     * first argument is coluanm name of json string.
     * second argument is key for finding.
-    * return integer or null
+    * return integer or null.
         * boolean is returned as integer
     * nested key is separate by '.'.
     * if key include '.', escape by '\\'
@@ -76,7 +77,7 @@
     * two arguments.
     * first argument is coluanm name of json string.
     * second argument is key for finding.
-    * return real or null
+    * return real or null.
     * nested key is separate by '.'.
     * if key include '.', escape by '\\'
 

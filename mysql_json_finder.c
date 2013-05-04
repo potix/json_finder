@@ -85,7 +85,7 @@ jfget(UDF_INIT *initid, UDF_ARGS *args, char *result, unsigned long *length, cha
 			*error = 1;
 			return NULL;
 		}
-		*length = uestr_size;
+		*length = uestr_size - 1;
 		initid->ptr = uestr;
 		return uestr;
 	case JSON_NULL:
@@ -98,7 +98,7 @@ jfget(UDF_INIT *initid, UDF_ARGS *args, char *result, unsigned long *length, cha
 }
 
 my_bool
-jfget_int_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
+jfgetint_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
 {
 	if (args->arg_count != 2) {
 		strcpy(message, "jfget() requires two arguments");
@@ -118,13 +118,13 @@ jfget_int_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
 }
 
 void
-jfget_int_deinit(UDF_INIT *initid)
+jfgetint_deinit(UDF_INIT *initid)
 {
 	return;
 }
 
 long long
-jfget_int(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
+jfgetint(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 {
 	json_elem_t elem;
 
@@ -167,7 +167,7 @@ jfget_int(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 }
 
 my_bool
-jfget_real_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
+jfgetreal_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
 {
 	if (args->arg_count != 2) {
 		strcpy(message, "jfget() requires two arguments");
@@ -187,13 +187,13 @@ jfget_real_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
 }
 
 void
-jfget_real_deinit(UDF_INIT *initid)
+jfgetreal_deinit(UDF_INIT *initid)
 {
 	return;
 }
 
 double
-jfget_real(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
+jfgetreal(UDF_INIT *initid, UDF_ARGS *args, char *is_null, char *error)
 {
 	json_elem_t elem;
 
@@ -274,6 +274,6 @@ jfmin(UDF_INIT *initid, UDF_ARGS *args, char *result, unsigned long *length, cha
                 return NULL;
         }
 	initid->ptr = json_min;
-	*length = json_min_size -1;
+	*length = json_min_size - 1;
 	return json_min;
 }
