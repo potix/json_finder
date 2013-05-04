@@ -52,10 +52,10 @@ json_find(
 		}
 		break;
 	case JSON_INTEGER:
-		sqlite3_result_int64(context, elem.value.ll);
+		sqlite3_result_int64(context, elem.value.ll.v);
 		break;
 	case JSON_DOUBLE:
-		sqlite3_result_double(context, elem.value.d);
+		sqlite3_result_double(context, elem.value.d.v);
 		break;
 	case JSON_STRING:
 		if (json_finder_unescape_strdup(&uestr, &uestr_size, &elem.value.s)) {

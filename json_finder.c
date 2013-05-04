@@ -570,7 +570,9 @@ json_finder_find(
 						if (name.len == comp_sep_key_len &&
 						    strncmp(name.ptr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_INTEGER;
-							target->value.ll = val.ll;
+							target->value.ll.v = val.ll;
+							target->value.ll.s.ptr = first;
+							target->value.ll.s.len = it - first;
 							free(mem);
 							return 0;	
 						}
@@ -579,7 +581,9 @@ json_finder_find(
 						if (idxstr_len == comp_sep_key_len &&
 						    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_INTEGER;
-							target->value.ll = val.ll;
+							target->value.ll.v = val.ll;
+							target->value.ll.s.ptr = first;
+							target->value.ll.s.len = it - first;
 							free(mem);
 							return 0;	
 						}
@@ -594,7 +598,9 @@ json_finder_find(
 						if (name.len == comp_sep_key_len &&
 						    strncmp(name.ptr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_DOUBLE;
-							target->value.d = val.d;
+							target->value.d.v = val.d;
+							target->value.d.s.ptr = first;
+							target->value.d.s.len = it - first;
 							free(mem);
 							return 0;	
 						}
@@ -603,7 +609,9 @@ json_finder_find(
 						if (idxstr_len == comp_sep_key_len &&
 						    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_DOUBLE;
-							target->value.d = val.d;
+							target->value.d.v = val.d;
+							target->value.d.s.ptr = first;
+							target->value.d.s.len = it - first;
 							free(mem);
 							return 0;	
 						}

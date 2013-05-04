@@ -4,6 +4,8 @@
 #define json_finder_free free
 
 typedef struct json_string json_string_t;
+typedef struct json_integer json_integer_t;
+typedef struct json_double json_double_t;
 typedef union json_value json_value_t;
 typedef struct json_elem json_elem_t;
 typedef struct json_finder json_finder_t;
@@ -21,11 +23,21 @@ struct json_string {
 	uint32_t len;
 };
 
+struct json_integer {
+        long long v;
+        json_string_t s;
+};
+
+struct json_double {
+        double v;
+        json_string_t s;
+};
+
 union json_value {
 	int b;
 	json_string_t s;
-	long long ll;
-	double d;
+	json_integer_t ll;
+	json_double_t d;
 };
 
 struct json_elem {

@@ -68,7 +68,7 @@ int main(void) {
                 printf("parse error\n");
 		return 1;
 	}
-	printf("hoge: > %lld\n", elem.value.ll); 
+	printf("hoge: > %lld\n", elem.value.ll.v); 
 #endif
 
 	result = json_finder_find(&elem, JSON_TEST1, strlen(JSON_TEST1), KEY("fuga"), NULL, &desc, NULL);
@@ -156,7 +156,7 @@ int main(void) {
                 printf("parse error\n");
 		return 1;
 	}
-	printf("b.l: > %lf\n", elem.value.d); 
+	printf("b.l: > %lf\n", elem.value.d.v); 
 #endif
 
 	result = json_finder_find(&elem, JSON_TEST1, strlen(JSON_TEST1), KEY("b.o"), NULL, &desc, NULL);
@@ -172,7 +172,7 @@ int main(void) {
                 printf("parse error\n");
 		return 1;
 	}
-	printf("b.o: > %lld\n", elem.value.ll); 
+	printf("b.o: > %lld\n", elem.value.ll.v); 
 #endif
 
 	result = json_finder_find(&elem, JSON_TEST1, strlen(JSON_TEST1), KEY("b.t.0"), NULL, &desc, NULL);
@@ -208,7 +208,7 @@ int main(void) {
                 printf("parse error\n");
 		return 1;
 	}
-	printf("b.t.1: > %lld\n", elem.value.ll); 
+	printf("b.t.1: > %lld\n", elem.value.ll.v); 
 #endif
 
 	result = json_finder_find(&elem, JSON_TEST1, strlen(JSON_TEST1), KEY("b.mmm"), NULL, &desc, NULL);
@@ -235,7 +235,7 @@ int main(void) {
                 printf("parse error\n");
 		return 1;
 	}
-	printf("nnn.ooo.rrr: > %lld\n", elem.value.ll); 
+	printf("nnn.ooo.rrr: > %lld\n", elem.value.ll.v); 
 #endif
 
 	result = json_finder_find(&elem, JSON_TEST1, strlen(JSON_TEST1), KEY("uu\\.ff\\\\\\..b"), NULL, &desc, NULL);
@@ -251,7 +251,7 @@ int main(void) {
                 printf("parse error\n");
 		return 1;
 	}
-	printf("uu\\.ff\\\\\\..b: > %lld\n", elem.value.ll); 
+	printf("uu\\.ff\\\\\\..b: > %lld\n", elem.value.ll.v); 
 #endif
 
 #ifdef PROF
