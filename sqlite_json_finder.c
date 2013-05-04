@@ -1,3 +1,4 @@
+#include <sys/types.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <sqlite3ext.h>
