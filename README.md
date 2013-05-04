@@ -2,6 +2,7 @@
 
 ## dependency
 * sqlite3 (need sqlite3ext.h)
+* mysql (need mysql.h)
 
 ## about json finder
 * json finder is library for find value from json string.
