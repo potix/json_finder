@@ -36,9 +36,9 @@ struct json_elem {
 int json_finder_find(
     json_elem_t *target,
     const char *json,
-    ssize_t json_size,
+    ssize_t json_len,
     const char *key,
-    ssize_t key_size,
+    ssize_t key_len,
     char const **error_positon,
     char const **error_description,
     int *error_line);
@@ -54,6 +54,6 @@ json_finder_minimize(
     char **json_min,
     ssize_t *json_min_size,
     const char *json,
-    ssize_t json_size);
+    ssize_t json_len);
 
 #endif

@@ -25,7 +25,7 @@ int main(void) {
 	int i;
 #endif
 
-	if (json_finder_minimize(&json_min, &json_min_size, JSON_TEST1, sizeof(JSON_TEST1))) {
+	if (json_finder_minimize(&json_min, &json_min_size, JSON_TEST1, strlen(JSON_TEST1))) {
                 printf("minimize error\n");
 		return 1;
 	}

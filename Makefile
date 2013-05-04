@@ -1,30 +1,40 @@
 OS=$(shell uname)
 CFLAGS=-Wall -O3 -fPIC -I.
-ifeq ($(OS), Linux)
-  LDFLAGS=-shared
-else
+ifeq ($(OS), Darwin)
   LDFLAGS=-bundle
+else
+  LDFLAGS=-shared
 endif
-FINDER_SHNAME=sqlite_json_finder.so.0.0.0
-FINDER_SRCS=json_finder.c sqlite_json_finder.c
-FINDER_OBJS=$(FINDER_SRCS:%.c=%.o)
-FINDER_TEST=json_finder_test
-FINDER_PROF=json_finder_prof
 
-all: sqlite_json_finder
-test: $(FINDER_TEST)
-prof: $(FINDER_PROF)
-clean: finder_clean
+SQLITE_JSON_FINDER_SHNAME=sqlite_json_finder.so.0.0.0
+SQLITE_JSON_FINDER_SRCS=json_finder.c sqlite_json_finder.c
+SQLITE_JSON_FINDER_OBJS=$(SQLITE_JSON_FINDER_SRCS:%.c=%.o)
+MYSQL_JSON_FINDER_SHNAME=mysql_json_finder.so.0.0.0
+MYSQL_JSON_FINDER_SRCS=json_finder.c mysql_json_finder.c
+MYSQL_JSON_FINDER_OBJS=$(MYSQL_JSON_FINDER_SRCS:%.c=%.o)
+JSON_FINDER_TEST=json_finder_test
+JSON_FINDER_PROF=json_finder_prof
 
-sqlite_json_finder: $(FINDER_OBJS)
-	gcc $(CFLAGS) $(FINDER_CFLAGS) $(LDFLAGS) $(FINDER_LDFLAGS) -o $(FINDER_SHNAME) $? $(FINDER_STATICLIBS)
+all: sqlite_json_finder mysql_json_finder
+test: $(JSON_FINDER_TEST)
+prof: $(JSON_FINDER_PROF)
+clean: json_finder_clean
+
+sqlite_json_finder: $(SQLITE_JSON_FINDER_OBJS)
+	gcc $(CFLAGS) $(LDFLAGS) -o $(SQLITE_JSON_FINDER_SHNAME) $? 
+mysql_json_finder: $(MYSQL_JSON_FINDER_OBJS)
+	gcc $(CFLAGS) $(LDFLAGS) -o $(MYSQL_JSON_FINDER_SHNAME) $?
 json_finder.o: json_finder.h
-	gcc $(CFLAGS) $(FINDER_CFLAGS) -c $*.c
-sqlite_finder.o: json_finder.h
-	gcc $(CFLAGS) $(FINDER_CFLAGS) -c $*.c
-$(FINDER_TEST):
+	gcc $(CFLAGS) -c $*.c
+sqlite_json_finder.o: json_finder.h
+	gcc $(CFLAGS) -c $*.c
+mysql_json_finder.o: json_finder.h
+	gcc $(CFLAGS) -c $*.c
+
+$(JSON_FINDER_TEST):
 	gcc $(CFLAGS) -o $@ json_finder.c json_finder_test.c
-$(FINDER_PROF):
+$(JSON_FINDER_PROF):
 	gcc $(CFLAGS) -pg -DPROF -o $@ json_finder.c json_finder_test.c
-finder_clean:
-	rm  -rf *.o $(FINDER_SHNAME) $(FINDER_TEST) $(FINDER_PROF)
+
+json_finder_clean:
+	rm  -rf *.o $(SQLITE_JSON_FINDER_SHNAME) $(MYSQL_JSON_FINDER_SHNAME) $(JSON_FINDER_TEST) $(JSON_FINDER_PROF)

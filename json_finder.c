@@ -177,8 +177,8 @@ do {							\
 #define CHECK_TOP() \
 	if (!top) {ERROR(it, "Unexpected character");}
 
-#define IS_END() \
-	(json_size > 0 && (it - json) >= json_size - 1)
+#define IS_FIND_END() \
+	(json_len > 0 && (it - json) >= json_len)
 
 #define KEY_STRCHAR()								\
 do {										\
@@ -214,15 +214,35 @@ do {										\
 	} else {								\
 		sep_key_len = comp_sep_key_len = it_key - sep_key_start;	\
 	}									\
-} while (0)
+} while(0)
+
+#define IDXTOSTR()					\
+do {							\
+        int i, v, r;					\
+							\
+	v = top->elem_idx;				\
+        if (v == 0) {					\
+		v = 1;					\
+        }						\
+        for (idxstr_len = 0; v != 0; idxstr_len++) {	\
+                v /=  10;				\
+        }						\
+        idxstr[idxstr_len] = '\0';			\
+	v = top->elem_idx;				\
+        for (i = idxstr_len - 1; i >= 0; i--) {		\
+                r  =  v % 10;				\
+                idxstr[i] = r + '0';			\
+                v /= 10;				\
+        }						\
+} while(0)
 
 int
 json_finder_find(
     json_elem_t *target,
     const char *json,
-    ssize_t json_size,
+    ssize_t json_len,
     const char *key,
-    ssize_t key_size,
+    ssize_t key_len,
     char const **error_pos,
     char const **error_desc,
     int *error_line)
@@ -261,8 +281,10 @@ json_finder_find(
 	char *last_key;
 
 	it = json;
-	// allocate memory
-	key_align_size = ALIGN_SIZE(key_size);
+	if (key_len < 0) {
+            key_len = strlen(key);
+        }
+	key_align_size = ALIGN_SIZE(key_len + 1);
 	mem = malloc(key_align_size + (sizeof(nest_json_elem_t) * INIT_NEST_MAX));
 	if (mem == NULL) {
 		ERROR(it, "Memory allocation error");
@@ -270,10 +292,11 @@ json_finder_find(
 	copy_key = mem,
 	nest_json_elems.nest_json_elems = mem + key_align_size;
 	nest_json_elems.nest_json_elems_count = INIT_NEST_MAX;
-	memcpy(copy_key, key, key_size);
+	memcpy(copy_key, key, key_len);
+        copy_key[key_len] = '\0';
 	sep_key_start = copy_key;
 	KEY_STRCHAR();
-	while (*it && !IS_END()) {
+	while (*it && !IS_FIND_END()) {
 		switch (*it) {
 		case '{':
 		case '[':
@@ -313,10 +336,7 @@ json_finder_find(
 						skip++;
 					}
 				} else {
-					idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
-					if (idxstr_len < 1) {
-						ERROR((it), "snprintf error");
-					}
+					IDXTOSTR();
 					if (idxstr_len == comp_sep_key_len &&
 					    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 						sep_key_start = sep_key_start + sep_key_len + 1;
@@ -339,9 +359,8 @@ json_finder_find(
 			}
 			// skip close character
 			++it;
-			skip--;
-			if (skip < 0) {
-				ERROR(it, "Skip value is negative");
+                        if (skip) {
+				skip--;
 			}
 			nest_json_elems.nest_json_elems_idx--;
 			if (nest_json_elems.nest_json_elems_idx > 0) {
@@ -403,7 +422,7 @@ json_finder_find(
 				} else {
 					++it;
 				}
-				if (IS_END()) {
+				if (IS_FIND_END()) {
 					ERROR(it, "Bad string");
 				}
 			}
@@ -424,10 +443,7 @@ json_finder_find(
 							return 0;	
 						}
 					} else {
-						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx++);
-						if (idxstr_len < 1) {
-							ERROR((it), "snprintf error");
-						}
+						IDXTOSTR();
 						if (idxstr_len == comp_sep_key_len &&
 						    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_STRING;
@@ -458,10 +474,7 @@ json_finder_find(
 							return 0;	
 						}
 					} else {
-						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
-						if (idxstr_len < 1) {
-							ERROR((it), "snprintf error");
-						}
+						IDXTOSTR();
 						if (idxstr_len == comp_sep_key_len &&
 						    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_NULL;
@@ -483,10 +496,7 @@ json_finder_find(
 							return 0;	
 						}
 					} else {
-						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
-						if (idxstr_len < 1) {
-							ERROR((it), "snprintf error");
-						}
+						IDXTOSTR();
 						if (idxstr_len == comp_sep_key_len &&
 						    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_BOOL;
@@ -509,10 +519,7 @@ json_finder_find(
 							return 0;	
 						}
 					} else {
-						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
-						if (idxstr_len < 1) {
-							ERROR((it), "snprintf error");
-						}
+						IDXTOSTR();
 						if (idxstr_len == comp_sep_key_len &&
 						    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_BOOL;
@@ -550,7 +557,7 @@ json_finder_find(
 					type = JSON_DOUBLE;
 				}
 				++it;
-				if (IS_END()) {
+				if (IS_FIND_END()) {
 					ERROR(it, "Bad number");
 				}
 			}
@@ -568,10 +575,7 @@ json_finder_find(
 							return 0;	
 						}
 					} else {
-						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
-						if (idxstr_len < 1) {
-							ERROR((first), "snprintf error");
-						}
+						IDXTOSTR();
 						if (idxstr_len == comp_sep_key_len &&
 						    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_INTEGER;
@@ -595,10 +599,7 @@ json_finder_find(
 							return 0;	
 						}
 					} else {
-						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
-						if (idxstr_len < 1) {
-							ERROR((first), "snprintf error");
-						}
+						IDXTOSTR();
 						if (idxstr_len == comp_sep_key_len &&
 						    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_DOUBLE;
@@ -618,7 +619,7 @@ json_finder_find(
 		// skip white space
 		while (*it == '\x20' || *it == '\x9' || *it == '\xD' || *it == '\xA') {
 			++it;
-			if (IS_END()) {
+			if (IS_FIND_END()) {
 				break;
 			}
 		}
@@ -632,7 +633,7 @@ json_finder_find(
 	return -1;
 }
 
-#define IS_STR_END() \
+#define IS_STRDUP_END() \
 	((it - str->ptr) >= str->len)
 int
 json_finder_unescape_strdup(
@@ -650,7 +651,7 @@ json_finder_unescape_strdup(
 	}
 	it = str->ptr;
 	last = first;
-	while (!IS_STR_END()) {
+	while (!IS_STRDUP_END()) {
 		if (*it == '\\') {
 			switch (*(it + 1)) {
 			case '"':
@@ -711,27 +712,31 @@ json_finder_unescape_strdup(
 	return 0;
 }
 
+
+#define IS_MIN_END() \
+        (json_len > 0 && (it - json) >= json_len)
+
 int
 json_finder_minimize(
     char **json_min,
     ssize_t *json_min_size,
     const char *json,
-    ssize_t json_size)
+    ssize_t json_len)
 {
 	const char *it;
 	char *first;
 	char *last;
 	
-	if (json_size < 0) {
-		return 1;
+	if (json_len < 0) {
+		json_len = strlen(json);
 	}
-	first = malloc((size_t)json_size);
+	first = malloc((size_t)json_len);
 	if (first == NULL) {
 		return 1;
 	}
 	it = json;
 	last = first;
-	while (*it) {
+	while (*it && !IS_MIN_END()) {
 		if (*it == '"') {
 			*last++ = *it++;
 			while (*it) {

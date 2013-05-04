@@ -30,9 +30,9 @@ json_find(
 	switch (json_finder_find(
 	    &elem,
 	    (const char *)sqlite3_value_text(argv[0]),
-            -1,
+	    (ssize_t)sqlite3_value_bytes(argv[0]),
 	    (char *)sqlite3_value_text(argv[1]),
-	    (ssize_t)sqlite3_value_bytes(argv[1]) + 1 /* '\0' */,
+	    (ssize_t)sqlite3_value_bytes(argv[1]),
             NULL,
             &desc,
             NULL)) {
@@ -95,7 +95,7 @@ json_minimize(
 	    &json_min,
 	    &json_min_size,
 	    (const char *)sqlite3_value_text(argv[0]),
-	    (ssize_t)sqlite3_value_bytes(argv[0]) + 1 /*'\0'*/)) {
+	    (ssize_t)sqlite3_value_bytes(argv[0]))) {
 		sqlite3_result_error(context, "Minimize error", -1);
 		return;
 	}
