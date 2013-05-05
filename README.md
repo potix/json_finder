@@ -38,6 +38,8 @@
     * second argument is key for finding.
     * nested key is separate by '.'.
         * e.g: { "a" : { "b" : 1 } } -> 'a.b', { "a" : [ "b" ] }  -> 'a.0'
+    * if key include '.', escape by '\\'
+        * e.g:  { "a.txt" : { "content" : "hello!!" } } -> 'a\.txt.content'
 
 ## restrictions
 * not supported UTF-16.
