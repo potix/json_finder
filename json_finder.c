@@ -7,28 +7,25 @@
 
 #include "json_finder.h"
 
-#ifndef MAX_NEST
-#define MAX_NEST 32
-#endif
-#ifndef MAX_PATH_LEN
-#define MAX_PATH_LEN 1024
+#ifndef INIT_NEST_MAX
+#define INIT_NEST_MAX 32
 #endif
 #define DEFAULT_NEST_SEPARATOR '.'
 #define MAX_IDXSTR_LEN 16
+#define ALIGN_SIZE(size) ((size) + 8 - ((size) & 7))
 
-typedef struct free_json_elems free_json_elems_t;
-typedef struct free_json_elem free_json_elem_t;
+typedef struct nest_json_elems nest_json_elems_t;
+typedef struct nest_json_elem nest_json_elem_t;
 
-struct free_json_elem {
-	uint32_t path_len;
-        json_string_t name;
-        uint32_t elem_idx;
-        uint8_t type;
+struct nest_json_elem {
+	uint32_t elem_idx;
+	uint8_t type;
 };
 
-struct free_json_elems {
-	free_json_elem_t free_json_elems[MAX_NEST];
-	uint32_t free_json_elems_idx;
+struct nest_json_elems {
+	nest_json_elem_t *nest_json_elems;
+	uint32_t nest_json_elems_count;
+	uint32_t nest_json_elems_idx;
 };
 
 // convert string to integer
@@ -167,10 +164,11 @@ do {							\
 	}						\
 	if (error_line) {				\
 		*error_line = 1 - escaped_newlines;	\
-		for (c = it; c != json; --c) {	\
+		for (c = it; c != json; --c) {		\
 			if (*c == '\n') ++*error_line;	\
 		}					\
 	}						\
+	free(mem);					\
 	return 1;					\
 } while(0)
 
@@ -180,55 +178,29 @@ do {							\
 #define IS_END() \
     (json_size > 0 && (it - json) > json_size)
 
-#define GET_PATH(pos) 											\
-do {													\
-	if (name.ptr) {											\
-		if (path_len + 1 + name.len >= MAX_PATH_LEN) {						\
-			ERROR((pos), "path is too long");						\
-		}											\
-		if (path_len != 0) {									\
-			path[path_len] = nsep;								\
-			path_len += 1;									\
-		}											\
-		memcpy(&path[path_len], name.ptr, name.len);						\
-		path_len += name.len;									\
-		path[path_len] = '\0';									\
-	} else {											\
-		if (path_len + 1 + MAX_IDXSTR_LEN >= MAX_PATH_LEN) {					\
-			ERROR((pos), "path is too long");						\
-		}											\
-		if (path_len != 0) {									\
-			path[path_len] = nsep;								\
-			path_len += 1;									\
-		}											\
-		idxstr_len = snprintf(&path[path_len], MAX_PATH_LEN - path_len, "%d", top->elem_idx);	\
-		if (idxstr_len < 1) {									\
-			ERROR((pos), "snprintf error");							\
-		}											\
-		path_len += idxstr_len;									\
-	}												\
-} while (0)
-
 int
 json_finder_find(
     json_elem_t *target,
     const char *json,
     ssize_t json_size,
     const char *key,
+    ssize_t key_size,
     char nest_sep,
     char const **error_pos,
     char const **error_desc,
     int *error_line)
 {
-	free_json_elem_t *root = NULL;
-	free_json_elem_t *top = NULL;
-	free_json_elem_t *free_elem = NULL;
+	nest_json_elem_t *root = NULL;
+	nest_json_elem_t *top = NULL;
+	nest_json_elem_t *nest_elem = NULL;
 	json_string_t name = {
 		.ptr = NULL,
 		.len = 0,
 	};
-	free_json_elems_t free_json_elems = {
-		.free_json_elems_idx = 0,
+	nest_json_elems_t nest_json_elems = {
+		.nest_json_elems = NULL,
+		.nest_json_elems_count = 0,
+		.nest_json_elems_idx = 0,
 	};
 	int escaped_newlines = 0;
 	const char *it;
@@ -239,10 +211,16 @@ json_finder_find(
 		long long ll;
 		double d;
 	} val;
-	char path[MAX_PATH_LEN];
-	uint32_t path_len = 0;
-	uint32_t prev_path_len;
+	char idxstr[MAX_IDXSTR_LEN];
+	char *copy_key = NULL;
+	uint32_t key_align_size;
+	char *sep_key_start;
+	uint32_t sep_key_start_off;
+	char *tmp;
+	uint32_t sep_key_len;
 	int8_t idxstr_len;
+	uint32_t skip = 0;
+	void *mem, *old_mem;
 
 	it = json;
 	if (nest_sep) {
@@ -250,41 +228,91 @@ json_finder_find(
 	} else {
 		nsep = DEFAULT_NEST_SEPARATOR;
 	}
+	// allocate memory
+	key_align_size = ALIGN_SIZE(key_size);
+	mem = malloc(key_align_size + (sizeof(nest_json_elem_t) * INIT_NEST_MAX));
+	if (mem == NULL) {
+		ERROR(it, "Memory allocation error");
+	}
+	copy_key = mem,
+	nest_json_elems.nest_json_elems = mem + key_align_size;
+	nest_json_elems.nest_json_elems_count = INIT_NEST_MAX;
+
+	memcpy(copy_key, key, key_size);
+	sep_key_start = copy_key;
+	tmp = strchr(copy_key, nsep);
+	if (tmp == NULL) {
+		sep_key_len = key_size - 1;
+	} else {
+		sep_key_len = tmp - sep_key_start;
+	}
 	while (*it && !IS_END()) {
 		switch (*it) {
 		case '{':
 		case '[':
-			// create new value
-			free_json_elems.free_json_elems_idx++;
-			if (free_json_elems.free_json_elems_idx > MAX_NEST) {
-				ERROR(it, "Too many nest");
-			} else {
-				free_elem = &free_json_elems.free_json_elems[free_json_elems.free_json_elems_idx - 1];
-			}
-			if (free_elem == NULL) {
-				ERROR(it, "Could not get free element");
-			}
-			// name
-			free_elem->name.ptr = name.ptr;
-			free_elem->name.len = name.len;
-			free_elem->elem_idx = 0;
-			// type
-			free_elem->type = (*it == '{') ? JSON_OBJECT : JSON_ARRAY;
-			// set top and root
-			if (top) {
-				GET_PATH(it);
-				free_elem->path_len = path_len;
-				top->elem_idx++;
-			} else if (!root) {
-				path[0] = '\0';
-				path_len = free_elem->path_len = 0;
-				root = free_elem;
-			} else {
-				ERROR(it, "Second root. Only one root allowed");
-			}
+			nest_json_elems.nest_json_elems_idx++;
+			if (nest_json_elems.nest_json_elems_idx > nest_json_elems.nest_json_elems_count) {
+				sep_key_start_off = sep_key_start - copy_key;
+				old_mem = mem;
+				mem = realloc(
+				    old_mem,
+				    key_align_size + (sizeof(nest_json_elem_t) * nest_json_elems.nest_json_elems_count * 2));
+				if (mem == NULL) {
+					mem = old_mem;
+					ERROR(it, "Memory allocation error");
+				}
+				copy_key = mem;
+				sep_key_start = mem + sep_key_start_off;
+				nest_json_elems.nest_json_elems = mem + key_align_size;
+				nest_json_elems.nest_json_elems_count = nest_json_elems.nest_json_elems_count * 2;
+			} 
+			nest_elem = &nest_json_elems.nest_json_elems[nest_json_elems.nest_json_elems_idx - 1];
+			nest_elem->type = (*it == '{') ? JSON_OBJECT : JSON_ARRAY;
+			nest_elem->elem_idx = 0;
 			// skip open character
 			++it;
-			top = free_elem;
+			if (!root) {
+				root = top = nest_elem;
+				name.ptr = NULL;
+				break;
+			}
+			if (!skip) {
+				if (name.ptr != NULL) {
+					if (name.len == sep_key_len &&
+					    strncmp(name.ptr, sep_key_start, sep_key_len) == 0) {
+						sep_key_start = sep_key_start + sep_key_len + 1;
+						tmp = strchr(sep_key_start, nsep);
+						if (tmp == NULL) {
+							sep_key_len = strlen(sep_key_start);
+						} else {
+							sep_key_len = tmp - sep_key_start;
+						}
+					} else {
+						skip++;
+					}
+				} else {
+					idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
+					if (idxstr_len < 1) {
+						ERROR((it), "snprintf error");
+					}
+					if (idxstr_len == sep_key_len &&
+					    strncmp(idxstr, sep_key_start, sep_key_len) == 0) {
+						sep_key_start = sep_key_start + sep_key_len + 1;
+						tmp = strchr(sep_key_start, nsep);
+						if (tmp == NULL) {
+							sep_key_len = strlen(sep_key_start);
+						} else {
+							sep_key_len = tmp - sep_key_start;
+						}
+					} else {
+						skip++;
+					}
+				}
+			} else {
+				skip++;
+			}
+			top->elem_idx++;	
+			top = nest_elem;
 			name.ptr = NULL;
 			break;
 		case '}':
@@ -294,18 +322,19 @@ json_finder_find(
 			}
 			// skip close character
 			++it;
-			// set top
-			free_json_elems.free_json_elems_idx--;
-			if (free_json_elems.free_json_elems_idx > 0) {
-				top =  &free_json_elems.free_json_elems[free_json_elems.free_json_elems_idx - 1];
-				path_len = top->path_len;
+			skip--;
+			if (skip < 0) {
+				ERROR(it, "Skip value is negative");
+			}
+			nest_json_elems.nest_json_elems_idx--;
+			if (nest_json_elems.nest_json_elems_idx > 0) {
+				top =  &nest_json_elems.nest_json_elems[nest_json_elems.nest_json_elems_idx - 1];
 			} else {
 				top = NULL;
 			}
 			break;
 		case ':':
-			if (!top || top->type != JSON_OBJECT)
-			{
+			if (!top || top->type != JSON_OBJECT) {
 				ERROR(it, "Unexpected character");
 			}
 			++it;
@@ -367,18 +396,31 @@ json_finder_find(
 				name.len = (it - first) - 1;
 			} else {
 				// new string value
-				prev_path_len = path_len;
-				GET_PATH(it);
-				if (strcmp(path, key) == 0) {
-					target->name.ptr = name.ptr;
-					target->name.len = name.len;
-					target->elem_idx = top->elem_idx;
-					target->type = JSON_STRING;
-					target->value.s.ptr = first;
-					target->value.s.len = (it - first) - 1;
-					return 0;	
+				if (!skip) {
+					if (name.ptr != NULL) {
+						if (name.len == sep_key_len &&
+						    strncmp(name.ptr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_STRING;
+							target->value.s.ptr = first;
+							target->value.s.len = (it - first) - 1;
+							free(mem);
+							return 0;	
+						}
+					} else {
+						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx++);
+						if (idxstr_len < 1) {
+							ERROR((it), "snprintf error");
+						}
+						if (idxstr_len == sep_key_len &&
+						    strncmp(idxstr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_STRING;
+							target->value.s.ptr = first;
+							target->value.s.len = (it - first) - 1;
+							free(mem);
+							return 0;	
+						}
+					}
 				}
-				path_len = prev_path_len;
 				top->elem_idx++;
 				name.ptr = NULL;
 			}
@@ -390,44 +432,79 @@ json_finder_find(
 			// new boolean value or new null value
 			if (*it == 'n' && *(it + 1) == 'u' && *(it + 2) == 'l' && *(it + 3) == 'l') {
 				// null
-				prev_path_len = path_len;
-				GET_PATH(it);
-				if (strcmp(path, key) == 0) {
-					target->name.ptr = name.ptr;
-					target->name.len = name.len;
-					target->elem_idx = top->elem_idx;
-					target->type = JSON_NULL;
-					return 0;
+				if (!skip) {
+					if (name.ptr != NULL) {
+						if (name.len == sep_key_len &&
+						    strncmp(name.ptr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_NULL;
+							free(mem);
+							return 0;	
+						}
+					} else {
+						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
+						if (idxstr_len < 1) {
+							ERROR((it), "snprintf error");
+						}
+						if (idxstr_len == sep_key_len &&
+						    strncmp(idxstr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_NULL;
+							free(mem);
+							return 0;	
+						}
+					}
 				}
-				path_len = prev_path_len;
 				it += 4;
 			} else if (*it == 't' && *(it + 1) == 'r' && *(it + 2) == 'u' && *(it + 3) == 'e') {
 				// true
-				prev_path_len = path_len;
-				GET_PATH(it);
-				if (strcmp(path, key) == 0) {
-					target->name.ptr = name.ptr;
-					target->name.len = name.len;
-					target->elem_idx = top->elem_idx;
-					target->type = JSON_BOOL;
-					target->value.b = 1;
-					return 0;
+				if (!skip) {
+					if (name.ptr != NULL) {
+						if (name.len == sep_key_len &&
+						    strncmp(name.ptr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_BOOL;
+							target->value.b = 1;
+							free(mem);
+							return 0;	
+						}
+					} else {
+						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
+						if (idxstr_len < 1) {
+							ERROR((it), "snprintf error");
+						}
+						if (idxstr_len == sep_key_len &&
+						    strncmp(idxstr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_BOOL;
+							target->value.b = 1;
+							free(mem);
+							return 0;	
+						}
+					}
 				}
-				path_len = prev_path_len;
 				it += 4;
 			} else if (*it == 'f' && *(it + 1) == 'a' && *(it + 2) == 'l' && *(it + 3) == 's' && *(it + 4) == 'e') {
 				// false
-				prev_path_len = path_len;
-				GET_PATH(it);
-				if (strcmp(path, key) == 0) {
-					target->name.ptr = name.ptr;
-					target->name.len = name.len;
-					target->elem_idx = top->elem_idx;
-					target->type = JSON_BOOL;
-					target->value.b = 0;
-					return 0;
+				if (!skip) {
+					if (name.ptr != NULL) {
+						if (name.len == sep_key_len &&
+						    strncmp(name.ptr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_BOOL;
+							target->value.b = 0;
+							free(mem);
+							return 0;	
+						}
+					} else {
+						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
+						if (idxstr_len < 1) {
+							ERROR((it), "snprintf error");
+						}
+						if (idxstr_len == sep_key_len &&
+						    strncmp(idxstr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_BOOL;
+							target->value.b = 0;
+							free(mem);
+							return 0;	
+						}
+					}
 				}
-				path_len = prev_path_len;
 				it += 5;
 			} else {
 				ERROR(it, "Unknown identifier");
@@ -464,32 +541,56 @@ json_finder_find(
 				if (streamtoll(first, it, &val.ll) != it) {
 					ERROR(first, "Bad integer number");
 				}
-				prev_path_len = path_len;
-				GET_PATH(first);
-				if (strcmp(path, key) == 0) {
-					target->name.ptr = name.ptr;
-					target->name.len = name.len;
-					target->elem_idx = top->elem_idx;
-					target->type = JSON_INTEGER;
-					target->value.ll = val.ll;
-					return 0;
+				if (!skip) {
+					if (name.ptr != NULL) {
+						if (name.len == sep_key_len &&
+						    strncmp(name.ptr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_INTEGER;
+							target->value.ll = val.ll;
+							free(mem);
+							return 0;	
+						}
+					} else {
+						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
+						if (idxstr_len < 1) {
+							ERROR((first), "snprintf error");
+						}
+						if (idxstr_len == sep_key_len &&
+						    strncmp(idxstr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_INTEGER;
+							target->value.ll = val.ll;
+							free(mem);
+							return 0;	
+						}
+					}
 				}
-				path_len = prev_path_len;
 			} else {
 				if (streamtod(first, it, &val.d) != it) {
 					ERROR(first, "Bad float number");
 				}
-				prev_path_len = path_len;
-				GET_PATH(first);
-				if (strcmp(path, key) == 0) {
-					target->name.ptr = name.ptr;
-					target->name.len = name.len;
-					target->elem_idx = top->elem_idx;
-					target->type = JSON_DOUBLE;
-					target->value.d = val.d;
-					return 0;
+				if (!skip) {
+					if (name.ptr != NULL) {
+						if (name.len == sep_key_len &&
+						    strncmp(name.ptr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_DOUBLE;
+							target->value.ll = val.d;
+							free(mem);
+							return 0;	
+						}
+					} else {
+						idxstr_len = snprintf(idxstr, sizeof(idxstr), "%d", top->elem_idx);
+						if (idxstr_len < 1) {
+							ERROR((first), "snprintf error");
+						}
+						if (idxstr_len == sep_key_len &&
+						    strncmp(idxstr, sep_key_start, sep_key_len) == 0) {
+							target->type = JSON_DOUBLE;
+							target->value.ll = val.d;
+							free(mem);
+							return 0;	
+						}
+					}
 				}
-				path_len = prev_path_len;
 			}
 			top->elem_idx++;
 			name.ptr = NULL;
@@ -510,6 +611,7 @@ json_finder_find(
 	}
 
 	/* not found */
+	free(mem);
 	return -1;
 }
 

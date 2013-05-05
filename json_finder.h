@@ -30,8 +30,6 @@ union json_value {
 
 struct json_elem {
 	json_value_t value;
-        json_string_t name;
-	uint32_t elem_idx;
         uint8_t type;
 };
 
@@ -40,6 +38,7 @@ int json_finder_find(
     const char *json,
     ssize_t json_size,
     const char *key,
+    ssize_t key_size,
     char nest_separator,
     char const **error_positon,
     char const **error_description,
