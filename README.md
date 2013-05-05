@@ -43,6 +43,5 @@
 * not supported UTF-16.
 
 ## TODO
-* support escaped '.' of key.
 * sufficient test.
 * support mysql.

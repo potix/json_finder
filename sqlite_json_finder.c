@@ -33,7 +33,6 @@ json_find(
             -1,
 	    (char *)sqlite3_value_text(argv[1]),
 	    (ssize_t)sqlite3_value_bytes(argv[1]) + 1 /* '\0' */,
-	    0,
             NULL,
             &desc,
             NULL)) {

@@ -39,7 +39,6 @@ int json_finder_find(
     ssize_t json_size,
     const char *key,
     ssize_t key_size,
-    char nest_separator,
     char const **error_positon,
     char const **error_description,
     int *error_line);
