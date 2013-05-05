@@ -40,14 +40,9 @@
         * e.g: { "a" : { "b" : 1 } } -> 'a.b', { "a" : [ "b" ] }  -> 'a.0'
 
 ## restrictions
-* not supported nesting 32 times or more.
-    * but this limit change by -DMAX_NEST define with compile option.
-* not supported key length exceeds 1024byte.
-    * but this limit change by -DMAX_PATH_LEN define with compile option.
 * not supported UTF-16.
 
 ## TODO
-* speed up.
-* reduce restrictions.
+* support escaped '.' of key.
 * sufficient test.
-* mysql support.
+* support mysql.
