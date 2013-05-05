@@ -178,7 +178,7 @@ do {							\
 	if (!top) {ERROR(it, "Unexpected character");}
 
 #define IS_END() \
-	(json_size > 0 && (it - json) > json_size)
+	(json_size > 0 && (it - json) >= json_size - 1)
 
 #define KEY_STRCHAR()								\
 do {										\
@@ -191,25 +191,28 @@ do {										\
 					last_key = it_key;			\
 				}						\
 				it_key++;					\
+				*last_key++ = *it_key++;			\
 			} else {						\
 				if (last_key) {					\
 					*last_key++ = *it_key++;		\
+					*last_key++ = *it_key++;		\
 				} else {					\
-					it_key++;				\
+					it_key += 2;				\
 				}						\
 			}							\
-		}								\
-		if (last_key) {							\
-			*last_key++ = *it_key++;				\
 		} else {							\
-			it_key++;						\
+			if (last_key) {						\
+				*last_key++ = *it_key++;			\
+			} else {						\
+				it_key++;					\
+			}							\
 		}								\
 	}									\
 	if (last_key) {								\
 		comp_sep_key_len = last_key - sep_key_start;			\
 		sep_key_len = it_key - sep_key_start;				\
 	} else {								\
-		sep_key_len = comp_sep_key_len =  it_key - sep_key_start;	\
+		sep_key_len = comp_sep_key_len = it_key - sep_key_start;	\
 	}									\
 } while (0)
 
@@ -629,24 +632,25 @@ json_finder_find(
 	return -1;
 }
 
+#define IS_STR_END() \
+	((it - str->ptr) >= str->len)
 int
 json_finder_unescape_strdup(
     char **unescape_str,
     size_t *unescape_str_size,
     json_string_t *str) {
+	const char *it;
 	char *first;
-	char *it;
 	char *last;
 	unsigned int codepoint;
 	
-	if ((first = malloc(str->len + 1)) == NULL) {
+	first = malloc(str->len + 1);
+	if (first == NULL) {
 		return 1;
 	}
-	memcpy(first, str->ptr, str->len);
-	first[str->len] = '\0';
-	it = first;
-	last = it;
-	while (*it) {
+	it = str->ptr;
+	last = first;
+	while (!IS_STR_END()) {
 		if (*it == '\\') {
 			switch (*(it + 1)) {
 			case '"':
