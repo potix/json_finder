@@ -52,7 +52,8 @@ json_finder_unescape_strdup(
 int
 json_finder_minimize(
     char **json_min,
-    size_t *json_min_size,
-    const char *json);
+    ssize_t *json_min_size,
+    const char *json,
+    ssize_t json_size);
 
 #endif

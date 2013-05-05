@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <ctype.h>
-#include <limits.h>
 
 #include "json_finder.h"
 
@@ -28,6 +26,10 @@ struct nest_json_elems {
 	uint32_t nest_json_elems_idx;
 };
 
+
+// true if character represent a digit
+#define IS_DIGIT(c) (c >= '0' && c <= '9')
+
 // convert string to integer
 inline static const char *
 streamtoll(
@@ -46,7 +48,7 @@ streamtoll(
 			++first;
 		}
 	}
-	for (; first != last && isdigit(*first); ++first) {
+	for (; first != last && IS_DIGIT(*first); ++first) {
 		result = (10 * result) + (*first - '0');
 	}
 	if (negative) {
@@ -81,13 +83,13 @@ streamtod(
 		}
 	}
 	// integer part
-	for (; first != last && isdigit(*first); ++first) {
+	for (; first != last && IS_DIGIT(*first); ++first) {
 		result = (10 * result) + (*first - '0');
 	}
 	// fraction part
 	if (first != last && *first == '.') {
 		++first;
-		for (; first != last && isdigit(*first); ++first) {
+		for (; first != last && IS_DIGIT(*first); ++first) {
 			result += (*first - '0') * inv_base;
 			inv_base *= 0.1f;
 		}
@@ -104,7 +106,7 @@ streamtod(
 		} else if (*first == '+') {
 			++first;
 		}
-		for (; first != last && isdigit(*first); ++first) {
+		for (; first != last && IS_DIGIT(*first); ++first) {
 			exponent = 10 * exponent + (*first - '0');
 		}
 	}
@@ -135,7 +137,7 @@ hexstreamtoui(
 	int digit;
 
 	for (; first != last; ++first) {
-		if (isdigit(*first)) {
+		if (IS_DIGIT(*first)) {
 			digit = *first - '0';
 		} else if (*first >= 'a' && *first <= 'f') {
 			digit = *first - 'a' + 10;
@@ -180,20 +182,35 @@ do {							\
 
 #define KEY_STRCHAR()								\
 do {										\
-	it_key = last_key = sep_key_start;					\
+	last_key = NULL;							\
+	it_key = sep_key_start;							\
 	while (*it_key != '\0' && *it_key != NEST_SEPARATOR) {			\
 		if (*it_key == '\\') {						\
 			if (*(it_key + 1) == '.') {				\
+				if (!last_key) {				\
+					last_key = it_key;			\
+				}						\
 				it_key++;					\
 			} else {						\
-				*last_key++ = *it_key++;			\
+				if (last_key) {					\
+					*last_key++ = *it_key++;		\
+				} else {					\
+					it_key++;				\
+				}						\
 			}							\
 		}								\
-		*last_key++ = *it_key++;					\
+		if (last_key) {							\
+			*last_key++ = *it_key++;				\
+		} else {							\
+			it_key++;						\
+		}								\
 	}									\
-	*last_key = '\0';							\
-	comp_sep_key_len = last_key - sep_key_start;				\
-	sep_key_len = it_key - sep_key_start;					\
+	if (last_key) {								\
+		comp_sep_key_len = last_key - sep_key_start;			\
+		sep_key_len = it_key - sep_key_start;				\
+	} else {								\
+		sep_key_len = comp_sep_key_len =  it_key - sep_key_start;	\
+	}									\
 } while (0)
 
 int
@@ -570,7 +587,7 @@ json_finder_find(
 						if (name.len == comp_sep_key_len &&
 						    strncmp(name.ptr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_DOUBLE;
-							target->value.ll = val.d;
+							target->value.d = val.d;
 							free(mem);
 							return 0;	
 						}
@@ -582,7 +599,7 @@ json_finder_find(
 						if (idxstr_len == comp_sep_key_len &&
 						    strncmp(idxstr, sep_key_start, comp_sep_key_len) == 0) {
 							target->type = JSON_DOUBLE;
-							target->value.ll = val.d;
+							target->value.d = val.d;
 							free(mem);
 							return 0;	
 						}
@@ -693,18 +710,23 @@ json_finder_unescape_strdup(
 int
 json_finder_minimize(
     char **json_min,
-    size_t *json_min_size,
-    const char *json)
+    ssize_t *json_min_size,
+    const char *json,
+    ssize_t json_size)
 {
+	const char *it;
 	char *first;
-	char *it;
 	char *last;
 	
-	if ((first = strdup(json)) == NULL) {
+	if (json_size < 0) {
 		return 1;
 	}
-	it = first;
-	last = it;
+	first = malloc((size_t)json_size);
+	if (first == NULL) {
+		return 1;
+	}
+	it = json;
+	last = first;
 	while (*it) {
 		if (*it == '"') {
 			*last++ = *it++;

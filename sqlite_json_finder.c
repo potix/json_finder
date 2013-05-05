@@ -82,7 +82,7 @@ json_minimize(
     sqlite3_value **argv)
 {
 	char *json_min;
-	size_t json_min_size;
+	ssize_t json_min_size;
 
 	switch (sqlite3_value_type(argv[0])) {
 	case SQLITE_TEXT:
@@ -91,7 +91,11 @@ json_minimize(
 		sqlite3_result_error(context, "Invalid argument (1).", -1);
 		return;
 	}
-	if (json_finder_minimize(&json_min, &json_min_size, (const char *)sqlite3_value_text(argv[0]))) {
+	if (json_finder_minimize(
+	    &json_min,
+	    &json_min_size,
+	    (const char *)sqlite3_value_text(argv[0]),
+	    (ssize_t)sqlite3_value_bytes(argv[0]) + 1 /*'\0'*/)) {
 		sqlite3_result_error(context, "Minimize error", -1);
 		return;
 	}

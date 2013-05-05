@@ -12,6 +12,8 @@
      (str), sizeof((str))
 
 int main(void) {
+	char *json_min;
+	ssize_t json_min_size;
 	int result;
 	json_elem_t elem;
 	const char *desc;
@@ -19,10 +21,17 @@ int main(void) {
 	char *str;
 	size_t str_size;
 #endif
-
 #ifdef PROF
 	int i;
+#endif
 
+	if (json_finder_minimize(&json_min, &json_min_size, JSON_TEST1, sizeof(JSON_TEST1))) {
+                printf("minimize error\n");
+		return 1;
+	}
+	printf("json min: %s, size %zd\n", json_min, json_min_size);
+
+#ifdef PROF
 	for (i = 0; i < 1000000; i++) {
 #endif
 
