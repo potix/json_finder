@@ -63,7 +63,7 @@ json_find(
 			sqlite3_result_error(context, "Failed to allocate memory.", -1);
 			return;
 		}
-		sqlite3_result_text(context, uestr, uestr_size, json_finder_free);
+		sqlite3_result_text(context, uestr, uestr_size - 1, json_finder_free);
 		break;
 	case JSON_NULL:
 		sqlite3_result_null(context);
@@ -101,7 +101,7 @@ json_minimize(
 	sqlite3_result_text(
 	    context,
 	    json_min,
-	    json_min_size,
+	    json_min_size - 1,
 	    json_finder_free);
 }
 
