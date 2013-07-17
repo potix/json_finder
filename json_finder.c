@@ -279,6 +279,7 @@ json_finder_find(
 	void *mem, *old_mem;
 	char *it_key;
 	char *last_key;
+	int offset;
 
 	it = json;
 	if (key_len < 0) {
@@ -317,9 +318,10 @@ json_finder_find(
 				nest_json_elems.nest_json_elems = mem + key_align_size;
 				nest_json_elems.nest_json_elems_count = nest_json_elems.nest_json_elems_count * 2;
 				// adjust new pointer
-				nest_elem = &nest_json_elems.nest_json_elems[nest_json_elems.nest_json_elems_idx - 1];
-				top += (mem - old_mem);
-				root += (mem - old_mem);
+                                nest_elem = &nest_json_elems.nest_json_elems[nest_json_elems.nest_json_elems_idx - 1];
+                                offset = mem - old_mem;
+                                top = (void *)top + offset;
+                                root = (void *)root + offset;
 			} 
 			nest_elem->type = (*it == '{') ? JSON_OBJECT : JSON_ARRAY;
 			nest_elem->elem_idx = 0;
