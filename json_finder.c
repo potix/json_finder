@@ -316,6 +316,10 @@ json_finder_find(
 				sep_key_start = mem + sep_key_start_off;
 				nest_json_elems.nest_json_elems = mem + key_align_size;
 				nest_json_elems.nest_json_elems_count = nest_json_elems.nest_json_elems_count * 2;
+				// adjust new pointer
+				nest_elem = &nest_json_elems.nest_json_elems[nest_json_elems.nest_json_elems_idx - 1];
+				top += (mem - old_mem);
+				root += (mem - old_mem);
 			} 
 			nest_elem->type = (*it == '{') ? JSON_OBJECT : JSON_ARRAY;
 			nest_elem->elem_idx = 0;
